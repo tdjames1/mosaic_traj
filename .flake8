@@ -1,0 +1,14 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    versioneer.py,
+    mosaic_traj/_version.py,
+    docs/source/conf.py,
+    venv,
+    env,
+    .venv,
+    .env
+max-line-length = 115
