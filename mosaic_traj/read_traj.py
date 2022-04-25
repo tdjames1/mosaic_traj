@@ -12,7 +12,7 @@ Project.
 .. moduleauthor:: Tamora D. James <t.d.james1@leeds.ac.uk>, CEMAC (UoL)
 
 :copyright: © 2022 University of Leeds.
-:license: GPL 3.0 (see LICENSE)
+:license: BSD 3-clause (see LICENSE)
 
 Example::
         ./read_traj.py <file>
