@@ -18,7 +18,7 @@ Project.
 
 Example::
 
-plot_ts.py <path> --start <start_date> --end <end_date> --out <plot_dir>
+plot_ts.py <path> --start <start_date> --end <end_date> --out <plot_dir> --attr <attr>
 
 <path> Path to trajectory data
 
@@ -27,6 +27,8 @@ plot_ts.py <path> --start <start_date> --end <end_date> --out <plot_dir>
 <end_date> End date (inclusive) in ISO format YYYY-MM-DD
 
 <plot_dir> Path to save plots
+
+<attr> Attribute to plot
 
 """
 # standard library imports
@@ -67,6 +69,10 @@ def parse_args():
                         metavar='end date',
                         help='''End date''')
 
+    parser.add_argument('--attr', type=str,
+                        metavar='attribute', default=None,
+                        help='''Attribute''')
+
     pa = parser.parse_args()
 
     # Check if file exists
@@ -79,12 +85,12 @@ def parse_args():
         err_msg = "Path {0} is not a directory \n".format(pa.out)
         raise ValueError(err_msg)
 
-    return (pa.path, pa.out, pa.start, pa.end)
+    return (pa.path, pa.out, pa.start, pa.end, pa.attr)
 
 
 def main():
 
-    rtraj_path, out_dir, start, end = parse_args()
+    rtraj_path, out_dir, start, end, attr = parse_args()
 
     traj_data = []
     if start is not None:
@@ -96,7 +102,13 @@ def main():
     nattr = traj_data[0][1]['number of attributes']
     attr_names = traj_data[0][1]['attribute names']
 
-    fig, ax = plt.subplots(nrows=nattr, figsize=(6,12), tight_layout=True)
+    if attr is not None:
+        index = [i for i, s in enumerate(attr_names) if attr in s]
+        if len(index):
+            nattr = len(index)
+            attr_names = [attr_names[j] for j in index]
+
+    fig, ax = plt.subplots(nrows=nattr, figsize=(6,3*nattr), tight_layout=True)
 
     dates = []
     traj_dt = None
@@ -116,13 +128,17 @@ def main():
 
     summary[attr_names].plot(ax=ax, subplots=True, rot=45)
 
-    for a in ax.flat:
-        a.set(xlabel='Release time', ylabel='Trajectory average')
+    if nattr > 1:
+        for a in ax.flat:
+            a.set(xlabel='Release time', ylabel='Trajectory average')
+    else:
+        ax.set(xlabel='Release time', ylabel='Trajectory average')
 
     title = ' to '.join(dates)
     fig.suptitle(title)
 
-    file_name = '-'.join(dates) + '_summary.png'
+    suffix = 'summary' if attr is None else attr.replace(' ', '_')
+    file_name = '-'.join(dates) + '_' + suffix + '.png'
     if out_dir is not None:
         file_name = os.path.join(out_dir, file_name)
 
