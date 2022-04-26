@@ -17,9 +17,16 @@ Project.
 
 
 Example::
-        plot_ts.py <file>
 
-        <file> Path to file containing trajectory data
+plot_ts.py <path> --start <start_date> --end <end_date> --out <plot_dir>
+
+<path> Path to trajectory data
+
+<start_date> Start date in ISO format YYYY-MM-DD
+
+<end_date> End date (inclusive) in ISO format YYYY-MM-DD
+
+<plot_dir> Path to save plots
 
 """
 # standard library imports
@@ -30,12 +37,13 @@ import argparse
 import math
 
 # third party imports
+import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # use Agg backend for matplotlib
 import matplotlib.pyplot as plt
 
 # local imports
-from read_traj import read_traj
+from read_traj import read_traj, read_data
 
 
 def parse_args():
@@ -43,44 +51,82 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=formatter)
 
-    parser.add_argument('file', type=str,
-                        metavar='file',
+    parser.add_argument('path', type=str,
+                        metavar='path',
                         help='''Path to trajectory data''')
+
+    parser.add_argument('--out', type=str,
+                        metavar='output directory',
+                        help='''Path to output directory''')
+
+    parser.add_argument('--start', type=str,
+                        metavar='start date',
+                        help='''Start date''')
+
+    parser.add_argument('--end', type=str,
+                        metavar='end date',
+                        help='''End date''')
 
     pa = parser.parse_args()
 
     # Check if file exists
-    if pa.file and not os.path.exists(pa.file):
-        err_msg = "File {0} does not exist\n"
-        err_msg = err_msg.format(pa.file)
+    if pa.path and not os.path.exists(pa.path):
+        err_msg = "Path {0} does not exist\n".format(pa.path)
         raise ValueError(err_msg)
 
-    return (pa.file)
+    # Check if output directory exists
+    if pa.out and not os.path.isdir(pa.out):
+        err_msg = "Path {0} is not a directory \n".format(pa.out)
+        raise ValueError(err_msg)
+
+    return (pa.path, pa.out, pa.start, pa.end)
 
 
 def main():
 
-    rtraj_file = parse_args()
+    rtraj_path, out_dir, start, end = parse_args()
 
-    data, metadata = read_traj(rtraj_file)
+    traj_data = []
+    if start is not None:
+        traj_data = read_data(rtraj_path, start, end)
+    else:
+        data, metadata = read_traj(rtraj_path)
+        traj_data.append((data, metadata))
 
-    ts = metadata['trajectory base time']
-    nattr = metadata['number of attributes']
+    nattr = traj_data[0][1]['number of attributes']
+    attr_names = traj_data[0][1]['attribute names']
 
     fig, ax = plt.subplots(nrows=nattr, figsize=(6,12), tight_layout=True)
 
-    summary = data.groupby(level=0).mean()
+    dates = []
+    traj_dt = None
+    for i, (data, metadata) in enumerate(traj_data):
+        timestamp = metadata['trajectory base time']
+        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d00')
+        if i == 0:
+            dates.append(traj_dt.strftime('%Y%m%d'))
 
-    summary[metadata['attribute names']].plot(ax=ax, subplots=True, rot=45)
+    if i > 0:
+        dates.append(traj_dt.strftime('%Y%m%d'))
+
+    plot_data = [x[0] for x in traj_data]
+    plot_data = pd.concat(plot_data)
+
+    summary = plot_data.groupby(level=0).mean()
+
+    summary[attr_names].plot(ax=ax, subplots=True, rot=45)
 
     for a in ax.flat:
         a.set(xlabel='Release time', ylabel='Trajectory average')
 
-    traj_dt = dt.datetime.strptime(ts, '%Y%m%d00')
-    fig.suptitle(traj_dt.strftime('%Y%m%d'))
+    title = ' to '.join(dates)
+    fig.suptitle(title)
 
-    filename = os.path.basename(rtraj_file)
-    plt.savefig(filename + '_summary.png')
+    file_name = '-'.join(dates) + '_summary.png'
+    if out_dir is not None:
+        file_name = os.path.join(out_dir, file_name)
+
+    plt.savefig(file_name)
     plt.close()
 
 

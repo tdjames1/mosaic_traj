@@ -24,6 +24,7 @@ import os
 import datetime as dt
 import argparse
 import re
+import glob
 
 # third party imports
 import pandas as pd
@@ -206,6 +207,38 @@ def read_traj(filepath):
                    keys=pd.date_range(ts, periods=npart, freq=freq),
                    names=['READ', index_col])
     return df, metadata
+
+
+def read_data(input_dir, start_date, end_date=None):
+
+    if not os.path.isdir(input_dir):
+        err_msg = "Not a directory: {0}\n".format(input_dir)
+        raise ValueError(err_msg)
+
+    start_date = dt.datetime.fromisoformat(start_date)
+    if end_date is not None:
+        end_date = dt.datetime.fromisoformat(end_date)
+
+    start_dir = os.getcwd()
+    os.chdir(input_dir)
+
+    files = [glob.glob(date.strftime("rtraj*%Y%m%d00"))
+             for date in daterange(start_date, end_date)]
+    files = [filename for elem in files for filename in elem]
+
+    os.chdir(start_dir)
+
+    data = [read_traj(os.path.join(input_dir, file)) for file in files]
+
+    return data
+
+
+def daterange(start_date, end_date=None):
+    if end_date is None:
+        end_date = start_date
+
+    for n in range(int((end_date - start_date).days + 1)):
+        yield start_date + dt.timedelta(n)
 
 
 def main():
