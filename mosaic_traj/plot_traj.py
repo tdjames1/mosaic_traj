@@ -154,7 +154,7 @@ def main():
 
             # Plot trajectory between these points
             traj = traj.loc[ind0:ind1]
-            plt.plot(traj.LON, traj.LAT,
+            plt.plot((traj.LON + 180) % 360 - 180, traj.LAT,
                      color='purple', alpha=alpha[i],
                      transform=ccrs.PlateCarree(),
                      )
