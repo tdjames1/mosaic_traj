@@ -79,6 +79,10 @@ def parse_args():
                         metavar='frequency', default=15,
                         help='''Frequency at which to plot trajectories''')
 
+    parser.add_argument('--days', type=int,
+                        metavar='days', default=5,
+                        help='''Number of days over which to plot trajectories''')
+
     pa = parser.parse_args()
 
     # Check if path exists
@@ -96,12 +100,12 @@ def parse_args():
         err_msg = "Path {0} is not a directory \n".format(pa.out)
         raise ValueError(err_msg)
 
-    return (pa.path, pa.track, pa.out, pa.start, pa.end, pa.freq)
+    return (pa.path, pa.track, pa.out, pa.start, pa.end, pa.freq, pa.days)
 
 
 def main():
 
-    rtraj_path, track_file, out_dir, start, end, freq = parse_args()
+    rtraj_path, track_file, out_dir, start, end, freq, days = parse_args()
 
     plot_data = []
     if start is not None:
@@ -119,6 +123,7 @@ def main():
     nday = len(plot_data)
     depth = 4
     alpha = [math.exp(-x*depth/nday) for x in reversed(range(nday))]
+    traj_hours = days*24
     dates = []
     traj_dt = None
     for i, (data, metadata) in enumerate(plot_data):
@@ -138,17 +143,18 @@ def main():
                 # timestamp not available
                 continue
 
-            # Get subset of data where P is non-negative and P > 980 and plot
-            # trajectory between these points
+            # Get subset of data where P is non-negative and P > 980
+            # and length of trajectory is less than specified number
+            # of days
             ind0 = traj[traj['P (MB)'] > 0].index[0]
-            ind1 = traj[(traj['P (MB)'] > 0) & (traj['P (MB)'] < 980)]
-            if len(ind1) > 0:
-                ind1 = ind1.index[0]
-                traj = traj.loc[ind0:ind1]
-            else:
-                traj = traj.loc[ind0:]
+            ind1 = traj[traj['HOURS'] < -traj_hours].index[0]
+            out_of_range = traj[(traj['P (MB)'] > 0) & (traj['P (MB)'] < 980)]
+            if len(out_of_range) > 0:
+                ind1 = min(ind1, out_of_range.index[0])
 
-            plt.plot(traj.LON, traj.LAT,
+            # Plot trajectory between these points
+            traj = traj.loc[ind0:ind1]
+            plt.plot((traj.LON + 180) % 360 - 180, traj.LAT,
                      color='purple', alpha=alpha[i],
                      transform=ccrs.PlateCarree(),
                      )
