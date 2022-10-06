@@ -47,7 +47,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 # local imports
-from read_traj import read_traj, read_data
+from .read_traj import read_traj, read_data
 
 
 def parse_args():
