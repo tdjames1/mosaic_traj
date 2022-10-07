@@ -45,7 +45,7 @@ matplotlib.use('Agg')  # use Agg backend for matplotlib
 import matplotlib.pyplot as plt
 
 # local imports
-from read_traj import read_traj, read_data
+from .read_traj import read_traj, read_data
 
 
 def parse_args():
@@ -85,18 +85,16 @@ def parse_args():
         err_msg = "Path {0} is not a directory \n".format(pa.out)
         raise ValueError(err_msg)
 
-    return (pa.path, pa.out, pa.start, pa.end, pa.attr)
+    return pa
 
 
-def main():
-
-    rtraj_path, out_dir, start, end, attr = parse_args()
+def plot_ts(path, out_dir=None, start_date=None, end_date=None, attr=None):
 
     traj_data = []
-    if start is not None:
-        traj_data = read_data(rtraj_path, start, end)
+    if start_date is not None:
+        traj_data = read_data(path, start_date, end_date)
     else:
-        data, metadata = read_traj(rtraj_path)
+        data, metadata = read_traj(path)
         traj_data.append((data, metadata))
 
     nattr = traj_data[0][1]['number of attributes']
@@ -144,6 +142,11 @@ def main():
 
     plt.savefig(file_name)
     plt.close()
+
+
+def main():
+    args = parse_args()
+    plot_ts(args.path, args.out, args.start, args.end, args.attr)
 
 
 if __name__ == '__main__':

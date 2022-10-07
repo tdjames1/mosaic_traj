@@ -47,6 +47,8 @@ setup(
     entry_points={
         'console_scripts': [
             # 'command = some.module:some_function',
+            'rotrajts = mosaic_traj.plot_ts:main',
+            'rotrajplot = mosaic_traj.plot_traj:main',
         ],
     },
     include_package_data=True,

@@ -47,7 +47,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
 # local imports
-from read_traj import read_traj, read_data
+from .read_traj import read_traj, read_data
 
 
 def parse_args():
@@ -100,18 +100,16 @@ def parse_args():
         err_msg = "Path {0} is not a directory \n".format(pa.out)
         raise ValueError(err_msg)
 
-    return (pa.path, pa.track, pa.out, pa.start, pa.end, pa.freq, pa.days)
+    return pa
 
 
-def main():
-
-    rtraj_path, track_file, out_dir, start, end, freq, days = parse_args()
+def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, freq=15, days=5):
 
     plot_data = []
-    if start is not None:
-        plot_data = read_data(rtraj_path, start, end)
+    if start_date is not None:
+        plot_data = read_data(path, start_date, end_date)
     else:
-        plot_data.append(read_traj(rtraj_path))
+        plot_data.append(read_traj(path))
 
     fig, ax = plt.subplots(figsize=(9,9),
                            subplot_kw=dict(projection=ccrs.Orthographic(0, 90)))
@@ -183,6 +181,18 @@ def main():
 
     plt.savefig(file_name)
     plt.close()
+
+
+def main():
+
+    args = parse_args()
+    plot_traj(args.path,
+              out_dir=args.out,
+              track_file=args.track,
+              start_date=args.start,
+              end_date=args.end,
+              freq=args.freq,
+              days=args.days)
 
 
 if __name__ == '__main__':
