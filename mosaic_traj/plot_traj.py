@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Plot output from ROTRAJ trajectory model
+"""Plot trajectory output from ROTRAJ trajectory model
 
 This module was developed by CEMAC as part of the ACRoBEAR
-Project.
+project.
 
 .. module:: plot_traj
    :synopsis: Plot trajectory data
@@ -14,21 +13,6 @@ Project.
 
 :copyright: © 2022 University of Leeds.
 :license: BSD 3-clause (see LICENSE)
-
-
-Example::
-
-plot_traj.py <path> --track <track_file> --out <out_dir> --start <start_date> --end <end_date>
-
-<path> Path to trajectory data
-
-<track_file> Path to CSV containing ship track data
-
-<out_dir> Output directory
-
-<start_date> Start date in ISO format YYYY-MM-DD
-
-<end_date> End date (inclusive) in ISO format YYYY-MM-DD
 
 """
 # standard library imports
@@ -56,31 +40,26 @@ def parse_args():
                                      formatter_class=formatter)
 
     parser.add_argument('path', type=str,
-                        metavar='trajectory data',
                         help='''Path to trajectory data''')
 
     parser.add_argument('--track', type=str,
-                        metavar='track file',
                         help='''Path to ship track data''')
 
     parser.add_argument('--out', type=str,
-                        metavar='output directory',
                         help='''Path to output directory''')
 
     parser.add_argument('--start', type=str,
-                        metavar='start date',
-                        help='''Start date''')
+                        metavar='YYYY-MM-DD',
+                        help='''Start date in ISO format YYYY-MM-DD''')
 
     parser.add_argument('--end', type=str,
-                        metavar='end date',
-                        help='''End date''')
+                        metavar='YYYY-MM-DD',
+                        help='''End date (inclusive) in ISO format YYYY-MM-DD''')
 
-    parser.add_argument('--freq', type=int,
-                        metavar='frequency', default=15,
+    parser.add_argument('--freq', type=int, default=15,
                         help='''Frequency at which to plot trajectories''')
 
-    parser.add_argument('--days', type=int,
-                        metavar='days', default=5,
+    parser.add_argument('--days', type=int, default=5,
                         help='''Number of days over which to plot trajectories''')
 
     pa = parser.parse_args()
