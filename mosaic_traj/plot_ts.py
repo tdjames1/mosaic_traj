@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-Plot timeseries output from ROTRAJ trajectory model
+"""Plot timeseries output from ROTRAJ trajectory model
 
 This module was developed by CEMAC as part of the ACRoBEAR
-Project.
+project.
 
 .. module:: plot_ts
    :synopsis: Plot time series from trajectory data
@@ -14,21 +13,6 @@ Project.
 
 :copyright: © 2022 University of Leeds.
 :license: BSD 3-clause (see LICENSE)
-
-
-Example::
-
-plot_ts.py <path> --start <start_date> --end <end_date> --out <plot_dir> --attr <attr>
-
-<path> Path to trajectory data
-
-<start_date> Start date in ISO format YYYY-MM-DD
-
-<end_date> End date (inclusive) in ISO format YYYY-MM-DD
-
-<plot_dir> Path to save plots
-
-<attr> Attribute to plot
 
 """
 # standard library imports
@@ -54,24 +38,21 @@ def parse_args():
                                      formatter_class=formatter)
 
     parser.add_argument('path', type=str,
-                        metavar='path',
                         help='''Path to trajectory data''')
 
     parser.add_argument('--out', type=str,
-                        metavar='output directory',
                         help='''Path to output directory''')
 
     parser.add_argument('--start', type=str,
-                        metavar='start date',
-                        help='''Start date''')
+                        metavar='YYYY-MM-DD',
+                        help='''Start date  in ISO format YYYY-MM-DD''')
 
     parser.add_argument('--end', type=str,
-                        metavar='end date',
-                        help='''End date''')
+                        metavar='YYYY-MM-DD',
+                        help='''End date (inclusive) in ISO format YYYY-MM-DD''')
 
-    parser.add_argument('--attr', type=str,
-                        metavar='attribute', default=None,
-                        help='''Attribute''')
+    parser.add_argument('--attr', type=str, default=None,
+                        help='''Attribute to be plotted''')
 
     pa = parser.parse_args()
 
