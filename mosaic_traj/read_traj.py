@@ -28,6 +28,7 @@ import glob
 
 # third party imports
 import pandas as pd
+import numpy as np
 
 
 ATTR = {
@@ -37,6 +38,10 @@ ATTR = {
     10:  'height (m)',
     159: 'boundary layer height (m)'
 }
+
+DAYHOURS = 24
+DAYMINUTES = 24*60
+DAYSECONDS = 24*60*60
 
 
 def parse_args():
@@ -142,9 +147,16 @@ def process_metadata(file):
                 # extract number of clusters
                 metadata['number of clusters'] = get_numeric(line)
             elif 'cluster pointers' in line:
-                # get next line, extract cluster pointers
-                metadata['cluster pointers'] = get_numeric(next(f))
-                count = count + 1
+                # extract cluster pointers from subsequent line(s)
+                clusters = []
+                while len(clusters) < metadata['number of clusters']:
+                    current = get_numeric(next(f))
+                    if isinstance(current, list):
+                        clusters = clusters + current
+                    else:
+                        clusters = clusters + [current]
+                    count = count + 1
+                metadata['cluster pointers'] = clusters
             elif '3d trajectory' in line:
                 # get T/F value
                 metadata['3d trajectory'] = get_boolean(line)
@@ -161,18 +173,46 @@ def process_metadata(file):
     return metadata, count
 
 
+def get_freq_alias(n):
+    '''
+    Get frequency of trajectories, as a pandas timeseries offset
+    alias, assuming n trajectories equally spaced throughout one day.
+    '''
+    if n > 1:
+        # Interval between trajectories in seconds
+        seconds = DAYSECONDS/n
+        if seconds%60 == 0:
+            # Interval is some number of minutes
+            minutes = seconds/60
+            if minutes%60 == 0:
+                # Interval is some number of hours
+                hours = minutes/60
+                freq = f'{hours}H'
+            else:
+                freq = f'{minutes}min'
+        else:
+            freq = f'{seconds}S'
+    else:
+        freq = 'D'
+
+
 def read_traj(filepath):
 
     metadata, end = process_metadata(filepath)
 
-    # Assuming filename is of the form rtraj_mosaic_1min_YYYYmmdd00
-    fn = os.path.basename(filepath).split('_')
-    # traj_dt = dt.datetime.strptime(fn[-1], '%Y%m%d00')
-    freq = fn[-2]  # or infer from number of trajectories?
-
     traj_dt = dt.datetime.strptime(metadata['trajectory base time'], '%Y%m%d%H')
-    npart = metadata['total number of trajectories']
+    ntraj = metadata['total number of trajectories']
+    nclust = metadata['number of clusters']
+    clust = metadata['cluster pointers']
 
+    # Number of trajectories per cluster, assuming an equal number of
+    # trajectories per cluster
+    ntraj_pc = ntraj//nclust
+
+    # Trajectory frequency
+    freq = get_freq_alias(ntraj_pc)
+
+    # Number of time steps
     # TODO get NTS from per trajectory metadata
     nts = 88
 
@@ -183,7 +223,7 @@ def read_traj(filepath):
     index_col = col_names[0]
     skip_rows = end + 1
 
-    traj_list = [None]*npart
+    traj_list = [None]*ntraj
     with pd.read_csv(filepath,
                      skiprows=skip_rows,
                      delim_whitespace=True,
@@ -193,7 +233,7 @@ def read_traj(filepath):
                      index_col=index_col,
                      iterator=True) as reader:
         i = 0
-        while i < npart:
+        while i < ntraj:
             try:
                 chunk = reader.get_chunk(nts+1)
                 traj_list[i] = chunk
@@ -201,11 +241,15 @@ def read_traj(filepath):
             except StopIteration as e:
                 break
             i = i+1
-    # Combine reads, indexing by timestamp
-    ts = dt.datetime.strftime(traj_dt, '%Y-%m-%d')
-    df = pd.concat(traj_list,
-                   keys=pd.date_range(ts, periods=npart, freq=freq),
-                   names=['READ', index_col])
+
+    # Combine reads, indexing by cluster and read timestamp
+    init_ts = dt.datetime.strftime(traj_dt, '%Y-%m-%d')
+    cluster_index = np.array(metadata['cluster pointers']).repeat(ntraj_pc)
+    date_index = np.full(len(cluster_index),
+                         pd.date_range(init_ts, periods=ntraj_pc, freq=freq))
+    keys = [(x, y) for x, y in zip(cluster_index, date_index)]
+    df = pd.concat(traj_list, keys=keys, names=['CLUSTER', 'READ', index_col])
+
     return df, metadata
 
 
