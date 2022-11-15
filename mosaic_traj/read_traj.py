@@ -49,19 +49,26 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=formatter)
 
-    parser.add_argument('file', type=str,
-                        metavar='file',
+    parser.add_argument('path', type=str,
                         help='''Path to trajectory data''')
+
+    parser.add_argument('--start', type=str,
+                        metavar='YYYY-MM-DD',
+                        help='''Start date in ISO format YYYY-MM-DD''')
+
+    parser.add_argument('--end', type=str,
+                        metavar='YYYY-MM-DD',
+                        help='''End date (inclusive) in ISO format YYYY-MM-DD''')
 
     pa = parser.parse_args()
 
     # Check if file exists
-    if pa.file and not os.path.exists(pa.file):
-        err_msg = "File {0} does not exist\n"
-        err_msg = err_msg.format(pa.file)
+    if pa.path and not os.path.exists(pa.path):
+        err_msg = "Path {0} does not exist\n"
+        err_msg = err_msg.format(pa.path)
         raise ValueError(err_msg)
 
-    return (pa.file)
+    return pa
 
 
 def process_metadata(file):
@@ -291,8 +298,12 @@ def daterange(start_date, end_date=None):
 
 def main():
 
-    filepath = parse_args()
-    trajs = read_traj(filepath)
+    args = parse_args()
+    if args.start is not None:
+        trajs = read_data(args.path, start_date=args.start, end_date=args.end)
+    else:
+        trajs = read_traj(args.path)
+
     print(trajs)
 
     # end main()
