@@ -86,13 +86,13 @@ def process_metadata(file):
 
 '''
     def get_date(line):
-        m = re.search('\d{10}', line)
+        m = re.search('\\d{10}', line)
         if m is not None:
             return m[0]
 
 
     def get_numeric(line, type='int'):
-        m = re.findall('\d+', line)
+        m = re.findall('\\d+', line)
         if m is not None:
             if type == 'int':
                 m = [int(x) for x in m]
@@ -105,7 +105,7 @@ def process_metadata(file):
 
 
     def get_boolean(line):
-        m = re.split(':\s*', line)
+        m = re.split(':\\s*', line)
         if m is not None:
             m = True if m[-1] == 't' else False
         return m
