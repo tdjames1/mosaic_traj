@@ -39,9 +39,9 @@ ATTR = {
     159: 'boundary layer height (m)'
 }
 
-DAYHOURS = 24
-DAYMINUTES = 24*60
-DAYSECONDS = 24*60*60
+DAY_HOURS = 24
+DAY_MINUTES = 24*60
+DAY_SECONDS = 24*60*60
 
 
 def parse_args():
@@ -178,22 +178,25 @@ def get_freq_alias(n):
     Get frequency of trajectories, as a pandas timeseries offset
     alias, assuming n trajectories equally spaced throughout one day.
     '''
+    if not isinstance(n, int):
+        raise TypeError("'n' should be of type 'int'.")
+    freq = 'D'
     if n > 1:
         # Interval between trajectories in seconds
-        seconds = DAYSECONDS/n
+        seconds = DAY_SECONDS//n
         if seconds%60 == 0:
             # Interval is some number of minutes
-            minutes = seconds/60
+            minutes = seconds//60
             if minutes%60 == 0:
                 # Interval is some number of hours
-                hours = minutes/60
+                hours = minutes//60
                 freq = f'{hours}H'
             else:
                 freq = f'{minutes}min'
         else:
             freq = f'{seconds}S'
-    else:
-        freq = 'D'
+
+    return freq
 
 
 def read_traj(filepath):
