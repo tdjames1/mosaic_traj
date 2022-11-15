@@ -246,7 +246,7 @@ def read_traj(filepath):
             i = i+1
 
     # Combine reads, indexing by cluster and read timestamp
-    init_ts = dt.datetime.strftime(traj_dt, '%Y-%m-%d')
+    init_ts = dt.datetime.strftime(traj_dt, '%Y-%m-%d %H:%M:%S')
     cluster_index = np.array(metadata['cluster pointers']).repeat(ntraj_pc)
     date_index = np.full(len(cluster_index),
                          pd.date_range(init_ts, periods=ntraj_pc, freq=freq))
@@ -269,9 +269,10 @@ def read_data(input_dir, start_date, end_date=None):
     start_dir = os.getcwd()
     os.chdir(input_dir)
 
-    files = [glob.glob(date.strftime("rtraj*%Y%m%d00"))
+    files = [glob.glob(date.strftime("rtraj*%Y%m%d*"))
              for date in daterange(start_date, end_date)]
     files = [filename for elem in files for filename in elem]
+    files.sort()
 
     os.chdir(start_dir)
 
