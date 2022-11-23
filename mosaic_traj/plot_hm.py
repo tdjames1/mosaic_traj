@@ -57,6 +57,9 @@ def parse_args():
     parser.add_argument('--attr', type=str, default=None,
                         help='''Attribute to be plotted''')
 
+    parser.add_argument('--step', type=int, default=None,
+                        help='''Step value to be plotted''')
+
     pa = parser.parse_args()
 
     # Check if file exists
@@ -72,7 +75,7 @@ def parse_args():
     return pa
 
 
-def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None):
+def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None, step=None):
 
     data, metadata = read_data(path, start_date, end_date)
 
@@ -98,6 +101,8 @@ def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None):
 
     data = pd.concat(data)
     data = data.set_index(data.index.set_levels(PRES, level='CLUSTER'))
+    if step is not None:
+        data = data[data.index.isin([step], level='STEP')]
 
     fig, ax = plt.subplots(nrows=nattr, figsize=(6,3*nattr), tight_layout=True)
     if nattr > 1:
@@ -110,6 +115,7 @@ def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None):
     fig.suptitle(title)
 
     suffix = '' if attr is None else '_' + attr.replace(' ', '_')
+    suffix = suffix if step is None else suffix + f'_T-{step}'
     file_name = '-'.join(dates) + '_hm' + suffix + '.png'
     if out_dir is not None:
         file_name = os.path.join(out_dir, file_name)
@@ -130,7 +136,12 @@ def plot_data(data, var, ax):
 
 def main():
     args = parse_args()
-    plot_hm(args.path, args.out, args.start, args.end, args.attr)
+    plot_hm(args.path,
+            args.out,
+            args.start,
+            args.end,
+            args.attr,
+            args.step)
 
 
 if __name__ == '__main__':
