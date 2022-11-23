@@ -132,6 +132,7 @@ def plot_data(data, var, ax):
     cbar.ax.set_ylabel(var)
     ax.set(xlabel='Release time', ylabel='Pressure (hPa)')
     ax.invert_yaxis()
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
 
 
 def main():
