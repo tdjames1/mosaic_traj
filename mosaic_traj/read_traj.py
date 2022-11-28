@@ -263,29 +263,28 @@ def read_traj(filepath):
     return df, metadata
 
 
-def read_data(input_dir, start_date, end_date=None):
+def read_data(input_path, start_date=None, end_date=None):
 
-    if not os.path.isdir(input_dir):
-        err_msg = "Not a directory: {0}\n".format(input_dir)
-        raise ValueError(err_msg)
+    if not os.path.isdir(input_path):
+        if os.path.exists(input_path):
+            return read_traj(input_path)
+        else:
+            raise ValueError(f'Input path not found: {input_path}')
 
-    start_date = dt.datetime.fromisoformat(start_date)
-    if end_date is not None:
-        end_date = dt.datetime.fromisoformat(end_date)
-
-    start_dir = os.getcwd()
-    os.chdir(input_dir)
-
-    files = [glob.glob(date.strftime("rtraj*%Y%m%d*"))
-             for date in daterange(start_date, end_date)]
-    files = [filename for elem in files for filename in elem]
+    if start_date is not None:
+        start_date = dt.datetime.fromisoformat(start_date)
+        if end_date is not None:
+            end_date = dt.datetime.fromisoformat(end_date)
+        files = [glob.glob(os.path.join(input_path, date.strftime("rtraj*%Y%m%d*")))
+                 for date in daterange(start_date, end_date)]
+        files = [filepath for elem in files for filepath in elem]
+    else:
+        files = glob.glob(os.path.join(input_path, "rtraj*"))
     files.sort()
 
-    os.chdir(start_dir)
+    data = [read_traj(file) for file in files]
 
-    data = [read_traj(os.path.join(input_dir, file)) for file in files]
-
-    return data
+    return zip(*data)
 
 
 def daterange(start_date, end_date=None):
@@ -299,12 +298,8 @@ def daterange(start_date, end_date=None):
 def main():
 
     args = parse_args()
-    if args.start is not None:
-        trajs = read_data(args.path, start_date=args.start, end_date=args.end)
-    else:
-        trajs = read_traj(args.path)
-
-    print(trajs)
+    data, metadata = read_data(args.path, start_date=args.start, end_date=args.end)
+    print(data, metadata)
 
     # end main()
 
