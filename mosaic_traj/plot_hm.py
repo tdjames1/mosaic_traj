@@ -32,9 +32,6 @@ import matplotlib.pyplot as plt
 from .read_traj import read_traj, read_data
 
 
-PRES = [985,975,950,925,900,875,850,825,800,775,750,700,650,600,550,500,450,400,350,300]
-
-
 def parse_args():
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(description=__doc__,
@@ -43,14 +40,14 @@ def parse_args():
     parser.add_argument('path', type=str,
                         help='''Path to trajectory data''')
 
-    parser.add_argument('--out', type=str,
+    parser.add_argument('out_dir', type=str,
                         help='''Path to output directory''')
 
-    parser.add_argument('--start', type=str,
+    parser.add_argument('--start-date', type=str,
                         metavar='YYYY-MM-DD',
                         help='''Start date  in ISO format YYYY-MM-DD''')
 
-    parser.add_argument('--end', type=str,
+    parser.add_argument('--end-date', type=str,
                         metavar='YYYY-MM-DD',
                         help='''End date (inclusive) in ISO format YYYY-MM-DD''')
 
@@ -60,22 +57,37 @@ def parse_args():
     parser.add_argument('--step', type=int, default=None,
                         help='''Step value to be plotted''')
 
+    parser.add_argument('--cluster-name', type=str, default=None,
+                        help='''Cluster variable name''')
+
+    parser.add_argument('--cluster-values', type=float, nargs='+', default=None,
+                        help='''Cluster values to be plotted''')
+
+    parser.add_argument('--reverse-yaxis', action='store_true', default=False,
+                        help='''Reverse order of values on plot's y axis''')
+
     pa = parser.parse_args()
 
     # Check if file exists
     if pa.path and not os.path.exists(pa.path):
-        err_msg = "Path {0} does not exist\n".format(pa.path)
-        raise ValueError(err_msg)
+        raise ValueError(f"Path {pa.path} does not exist\n")
 
     # Check if output directory exists
-    if pa.out and not os.path.isdir(pa.out):
-        err_msg = "Path {0} is not a directory \n".format(pa.out)
-        raise ValueError(err_msg)
+    if pa.out_dir and not os.path.isdir(pa.out_dir):
+        raise ValueError(f"Path {pa.out_dir} is not a directory \n")
 
     return pa
 
 
-def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None, step=None):
+def plot_hm(path,
+            out_dir,
+            start_date=None,
+            end_date=None,
+            attr=None,
+            step=None,
+            cluster_name=None,
+            cluster_values=None,
+            reverse_yaxis=False):
 
     data, metadata = read_data(path, start_date, end_date)
 
@@ -100,15 +112,24 @@ def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None, step=
         dates = dates[0::len(dates)-1]
 
     data = pd.concat(data)
-    data = data.set_index(data.index.set_levels(PRES, level='CLUSTER'))
+    if cluster_values:
+        data = data.set_index(data.index.set_levels(cluster_values, level='CLUSTER'))
+    data = data.set_index(data.index.set_names({
+        'CLUSTER': cluster_name if cluster_name else 'Cluster',
+        'READ'   : 'Release time',
+    }))
     if step is not None:
         data = data[data.index.isin([step], level='STEP')]
 
     fig, ax = plt.subplots(nrows=nattr, figsize=(6,3*nattr), tight_layout=True)
     if nattr > 1:
         for i, a in enumerate(ax):
+            if reverse_yaxis:
+                a.invert_yaxis()
             plot_data(data, attr_names[i], ax=a)
     else:
+        if reverse_yaxis:
+            ax.invert_yaxis()
         plot_data(data, attr_names[0], ax=ax)
 
     title = ' to '.join(dates)
@@ -125,24 +146,21 @@ def plot_hm(path, out_dir=None, start_date=None, end_date=None, attr=None, step=
 
 
 def plot_data(data, var, ax):
-    dfp = data.pivot_table(index='CLUSTER', columns='READ',
+    idx, cols, _ = data.index.names
+    dfp = data.pivot_table(index=idx, columns=cols,
                            values=var, aggfunc='mean')
+    if any(map(lambda x: x < 2, dfp.shape)):
+        raise ValueError("Expecting at least 2 clusters / reads")
     ctr = ax.contourf(dfp.columns, dfp.index, dfp)
     cbar = plt.gcf().colorbar(ctr, ax=ax)
     cbar.ax.set_ylabel(var)
-    ax.set(xlabel='Release time', ylabel='Pressure (hPa)')
-    ax.invert_yaxis()
+    ax.set(xlabel=cols, ylabel=idx)
     plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
 
 
 def main():
     args = parse_args()
-    plot_hm(args.path,
-            args.out,
-            args.start,
-            args.end,
-            args.attr,
-            args.step)
+    plot_hm(**vars(args))
 
 
 if __name__ == '__main__':
