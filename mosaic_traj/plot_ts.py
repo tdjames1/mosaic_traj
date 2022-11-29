@@ -80,11 +80,9 @@ def plot_ts(path, out_dir, start_date=None, end_date=None, attr=None):
             nattr = len(index)
             attr_names = [attr_names[j] for j in index]
 
-    dates = []
-    for md in metadata:
-        timestamp = md['trajectory base time']
-        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d%H')
-        dates.append(traj_dt.strftime('%Y%m%d'))
+    dates = [dt.datetime.strptime(md['trajectory base time'],
+                                  '%Y%m%d%H').strftime('%Y%m%d')
+             for md in metadata]
     if len(dates) > 1:
         dates = dates[0::len(dates)-1]
 
