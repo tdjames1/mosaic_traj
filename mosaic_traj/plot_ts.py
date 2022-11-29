@@ -40,14 +40,14 @@ def parse_args():
     parser.add_argument('path', type=str,
                         help='''Path to trajectory data''')
 
-    parser.add_argument('--out', type=str,
+    parser.add_argument('out_dir', type=str,
                         help='''Path to output directory''')
 
-    parser.add_argument('--start', type=str,
+    parser.add_argument('--start-date', type=str,
                         metavar='YYYY-MM-DD',
                         help='''Start date  in ISO format YYYY-MM-DD''')
 
-    parser.add_argument('--end', type=str,
+    parser.add_argument('--end-date', type=str,
                         metavar='YYYY-MM-DD',
                         help='''End date (inclusive) in ISO format YYYY-MM-DD''')
 
@@ -58,28 +58,21 @@ def parse_args():
 
     # Check if file exists
     if pa.path and not os.path.exists(pa.path):
-        err_msg = "Path {0} does not exist\n".format(pa.path)
-        raise ValueError(err_msg)
+        raise ValueError(f"Path {pa.path} does not exist\n")
 
     # Check if output directory exists
-    if pa.out and not os.path.isdir(pa.out):
-        err_msg = "Path {0} is not a directory \n".format(pa.out)
-        raise ValueError(err_msg)
+    if pa.out_dir and not os.path.isdir(pa.out_dir):
+        raise ValueError(f"Path {pa.out_dir} is not a directory \n")
 
     return pa
 
 
-def plot_ts(path, out_dir=None, start_date=None, end_date=None, attr=None):
+def plot_ts(path, out_dir, start_date=None, end_date=None, attr=None):
 
-    traj_data = []
-    if start_date is not None:
-        traj_data = read_data(path, start_date, end_date)
-    else:
-        data, metadata = read_traj(path)
-        traj_data.append((data, metadata))
+    data, metadata = read_data(path, start_date, end_date)
 
-    nattr = traj_data[0][1]['number of attributes']
-    attr_names = traj_data[0][1]['attribute names']
+    nattr = metadata[0]['number of attributes']
+    attr_names = metadata[0]['attribute names']
 
     if attr is not None:
         index = [i for i, s in enumerate(attr_names) if attr in s]
@@ -87,31 +80,28 @@ def plot_ts(path, out_dir=None, start_date=None, end_date=None, attr=None):
             nattr = len(index)
             attr_names = [attr_names[j] for j in index]
 
-    fig, ax = plt.subplots(nrows=nattr, figsize=(6,3*nattr), tight_layout=True)
-
     dates = []
-    traj_dt = None
-    for i, (data, metadata) in enumerate(traj_data):
-        timestamp = metadata['trajectory base time']
-        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d00')
-        if i == 0:
-            dates.append(traj_dt.strftime('%Y%m%d'))
-
-    if i > 0:
+    for md in metadata:
+        timestamp = md['trajectory base time']
+        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d%H')
         dates.append(traj_dt.strftime('%Y%m%d'))
+    if len(dates) > 1:
+        dates = dates[0::len(dates)-1]
 
-    plot_data = [x[0] for x in traj_data]
-    plot_data = pd.concat(plot_data)
+    data = pd.concat(data)
+    data = data.set_index(data.index.set_names({
+        'READ': 'Release time',
+    }))
 
-    summary = plot_data.groupby(level=0).mean()
-
-    summary[attr_names].plot(ax=ax, subplots=True, rot=45)
-
+    fig, ax = plt.subplots(nrows=nattr, figsize=(6,3*nattr), tight_layout=True)
+    _, idx, _ = data.index.names
+    dfp = data.pivot_table(index=idx, values=attr_names, aggfunc='mean')
+    dfp.plot(ax=ax, rot=45, subplots=True, legend=None)
     if nattr > 1:
-        for a in ax.flat:
-            a.set(xlabel='Release time', ylabel='Trajectory average')
+        for i, a in enumerate(ax.flat):
+            a.set(ylabel=dfp.columns[i])
     else:
-        ax.set(xlabel='Release time', ylabel='Trajectory average')
+        ax.set(ylabel=dfp.columns[0])
 
     title = ' to '.join(dates)
     fig.suptitle(title)
@@ -127,7 +117,7 @@ def plot_ts(path, out_dir=None, start_date=None, end_date=None, attr=None):
 
 def main():
     args = parse_args()
-    plot_ts(args.path, args.out, args.start, args.end, args.attr)
+    plot_ts(**vars(args))
 
 
 if __name__ == '__main__':
