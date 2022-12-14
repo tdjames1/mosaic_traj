@@ -84,11 +84,7 @@ def parse_args():
 
 def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, freq=15, days=5):
 
-    plot_data = []
-    if start_date is not None:
-        plot_data = read_data(path, start_date, end_date)
-    else:
-        plot_data.append(read_traj(path))
+    data, metadata = read_data(path, start_date, end_date)
 
     fig, ax = plt.subplots(figsize=(9,9),
                            subplot_kw=dict(projection=ccrs.Orthographic(0, 90)))
@@ -97,25 +93,34 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
     ax.add_feature(cfeature.OCEAN)
     ax.gridlines()
 
-    nday = len(plot_data)
+    nday = len(data)
     depth = 4
     alpha = [math.exp(-x*depth/nday) for x in reversed(range(nday))]
     traj_hours = days*24
     dates = []
     traj_dt = None
-    for i, (data, metadata) in enumerate(plot_data):
-        timestamp = metadata['trajectory base time']
-        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d00')
+    for i, df in enumerate(data):
+        timestamp = metadata[i]['trajectory base time']
+        traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d%H')
         if i == 0:
             dates.append(traj_dt.strftime('%Y%m%d'))
 
-        periods = math.floor(len(data.groupby(level=0))/freq)
-        dt_index = pd.date_range(traj_dt.strftime('%Y%m%d'),
-                                 periods=periods, freq=str(freq)+"min")
+        nclust = metadata[i]['number of clusters']
+        if nclust > 1:
+            raise NotImplementedError("Plotting multiple clusters not yet implemented")
+
+        # Drop clustering level
+        df = df.droplevel('CLUSTER')
+
+        nread = len(df.groupby("READ"))
+        periods = math.floor(nread/freq) if nread > freq else 1
+
+        dt_index = pd.date_range(traj_dt.strftime('%Y%m%d %H:%M:%S'),
+                                 periods=periods, freq=f"{freq}min")
 
         for ts in dt_index:
             try:
-                traj = data.loc[ts]
+                traj = df.loc[ts]
             except KeyError:
                 # timestamp not available
                 continue
