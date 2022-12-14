@@ -86,6 +86,10 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
 
     data, metadata = read_data(path, start_date, end_date)
 
+    nclust = metadata[0]['number of clusters']
+    if nclust > 1:
+        raise NotImplementedError("Plotting multiple clusters not yet implemented")
+
     dates = [dt.datetime.strptime(md['trajectory base time'],
                                   '%Y%m%d%H').strftime('%Y%m%d') for md in metadata]
     if len(dates) > 1:
@@ -106,10 +110,6 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
     for i, df in enumerate(data):
         timestamp = metadata[i]['trajectory base time']
         traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d%H')
-
-        nclust = metadata[i]['number of clusters']
-        if nclust > 1:
-            raise NotImplementedError("Plotting multiple clusters not yet implemented")
 
         # Drop clustering level
         df = df.droplevel('CLUSTER')
