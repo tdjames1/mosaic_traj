@@ -86,6 +86,11 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
 
     data, metadata = read_data(path, start_date, end_date)
 
+    dates = [dt.datetime.strptime(md['trajectory base time'],
+                                  '%Y%m%d%H').strftime('%Y%m%d') for md in metadata]
+    if len(dates) > 1:
+        dates = dates[0::len(dates)-1]
+
     fig, ax = plt.subplots(figsize=(9,9),
                            subplot_kw=dict(projection=ccrs.Orthographic(0, 90)))
     ax.coastlines(zorder=3)
@@ -97,13 +102,10 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
     depth = 4
     alpha = [math.exp(-x*depth/nday) for x in reversed(range(nday))]
     traj_hours = days*24
-    dates = []
     traj_dt = None
     for i, df in enumerate(data):
         timestamp = metadata[i]['trajectory base time']
         traj_dt = dt.datetime.strptime(timestamp, '%Y%m%d%H')
-        if i == 0:
-            dates.append(traj_dt.strftime('%Y%m%d'))
 
         nclust = metadata[i]['number of clusters']
         if nclust > 1:
@@ -140,9 +142,6 @@ def plot_traj(path, out_dir, track_file=None, start_date=None, end_date=None, fr
                      color='purple', alpha=alpha[i],
                      transform=ccrs.PlateCarree(),
                      )
-
-    if i > 0:
-        dates.append(traj_dt.strftime('%Y%m%d'))
 
     if track_file is not None:
         track_data = pd.read_csv(track_file, index_col='timestamp')
